@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCF Master Pro v16.0 | Ultimate Fixed Dashboard</title>
+    <!-- SheetJS for Excel/CSV Support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --primary: #4f46e5; --success: #10b981; --danger: #f43f5e;
+            --warning: #f59e0b; --purple: #8b5cf6; 
+            --sidebar-bg: #0f172a;
+            --bg: #f3f4f6; 
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e5e7eb;
+            --nav-bg: #ffffff;
+            --table-hover: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg: #0b0f1a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --nav-bg: #1e293b;
+            --table-hover: #2d3748;
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; transition: background 0.2s, color 0.2s; }
+        body { margin: 0; background: var(--bg); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 1000; }
+        .sidebar-header { padding: 25px; font-size: 1.4rem; font-weight: 900; border-bottom: 1px solid #1e293b; color: #818cf8; display: flex; align-items: center; gap: 10px; }
+        .file-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .file-item { padding: 12px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }
+        .file-item:hover { background: #1e293b; }
+        .file-item.active { background: var(--primary); box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); }
+
+        /* Main Content */
+        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .navbar { background: var(--nav-bg); padding: 12px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 500; }
+        .navbar h3 { font-weight: 900; font-size: 1.4rem; margin: 0; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid var(--border); }
+        .stat-card { padding: 15px; border-radius: 15px; cursor: pointer; transition: 0.3s; text-align: center; color: white; border: 3px solid transparent; }
+        .stat-card.active { border-color: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.2); transform: scale(1.03); }
+        .stat-card .num { font-size: 1.8rem; font-weight: 900; display: block; }
+        .stat-card small { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+
+        #boxAll { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        #boxDupP { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        #boxDupN { background: linear-gradient(135deg, #6366f1, #4338ca); }
+        #boxIncomplete { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        #boxLong { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+        /* Toolbar */
+        .tools-section { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+        .tool-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .input-box { display: flex; align-items: center; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); padding: 5px 12px; gap: 8px; flex: 1; min-width: 200px; }
+        .input-box input { border: none; background: transparent; padding: 8px; outline: none; width: 100%; font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
+        
+        .btn { padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+        .btn-p { background: var(--primary); color: white; }
+        .btn-s { background: var(--success); color: white; }
+        .btn-d { background: var(--danger); color: white; }
+        .btn-theme { background: var(--bg); color: var(--text-main); border: 1px solid var(--border); }
+
+        /* --- TABLE HEADING FREEZE --- */
+        .table-container { 
+            flex: 1; 
+            overflow-y: auto; 
+            overflow-x: auto;
+            padding: 0 25px 25px 25px; 
+            margin-top: 10px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 12px;
+        }
+        
+        thead th { 
+            background: var(--primary) !important; 
+            color: white !important; 
+            padding: 18px 15px; 
+            text-align: left; 
+            font-size: 0.85rem; 
+            font-weight: 900; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            text-transform: uppercase;
+            box-shadow: inset 0 -2px 0 #3730a3;
+        }
+        
+        tbody td { padding: 14px 15px; border-bottom: 1px solid var(--border); font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
+        tbody tr:hover { background-color: var(--table-hover); }
+
+        /* --- STATUS BADGES (FIXED COLORS) --- */
+        .badge { 
+            padding: 6px 10px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            font-weight: 900; 
+            color: white !important; 
+            margin-right: 5px; 
+            display: inline-block; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            text-transform: uppercase;
+        }
+        .badge-danger { background-color: var(--danger) !important; }
+        .badge-primary { background-color: #3b82f6 !important; }
+        .badge-warning { background-color: var(--warning) !important; color: #1e293b !important; }
+        .badge-purple { background-color: var(--purple) !important; }
+
+        .highlight { background: #fef08a; font-weight: 900; color: black !important; padding: 0 2px; }
+
+        /* Drag Checkbox */
+        .drag-check { width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary); }
+
+        /* Modal & Toast */
+        #modalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(5px); }
+        #customModal { background: var(--card-bg); padding: 35px; border-radius: 20px; width: 380px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); color: var(--text-main); }
+        #toast { position: fixed; bottom: 30px; right: 30px; background: #1e293b; color: white; padding: 15px 35px; border-radius: 12px; z-index: 3000; display: none; font-weight: 700; border-left: 6px solid var(--success); }
+
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; left: -260px; height: 100%; }
+            .sidebar.open { left: 0; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body class="light-mode">
+
+    <!-- Modal Popup -->
+    <div id="modalOverlay" onclick="closeModal()">
+        <div id="customModal" onclick="event.stopPropagation()">
+            <span id="modalIcon" style="font-size: 3.5rem; display: block; margin-bottom: 10px;">⚠️</span>
+            <div id="modalTitle" style="font-size: 1.4rem; font-weight: 900;">Alert</div>
+            <div id="modalMsg" style="margin: 15px 0 25px; font-weight: 600;">Message here...</div>
+            <button class="btn btn-p" style="width: 100%; justify-content: center;" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">Notification</div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header"><i class="fas fa-id-card"></i> VCF MASTER</div>
+        <div class="file-list" id="fileList">
+            <div class="file-item active" onclick="switchView('all')"><i class="fas fa-layer-group"></i> MASTER LIST</div>
+        </div>
+        <div style="padding: 20px;">
+            <label class="btn btn-p" style="width: 100%; justify-content: center; padding: 15px;">
+                <i class="fas fa-file-import"></i> IMPORT FILES
+                <input type="file" id="multiInput" multiple accept=".vcf,.csv,.xls,.xlsx" style="display:none">
+            </label>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Area -->
+    <div class="main-area">
+        <div class="navbar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <i class="fas fa-bars" onclick="document.getElementById('sidebar').classList.toggle('open')" style="cursor:pointer; font-size: 1.5rem; display:none;" id="menuIcon"></i>
+                <h3 id="viewTitle">DASHBOARD</h3>
+            </div>
+            <div style="display:flex; gap:10px; align-items: center;">
+                <button class="btn btn-theme" onclick="toggleTheme()" id="themeToggle"><i class="fas fa-moon"></i></button>
+                <button class="btn btn-s" onclick="exportToExcel()" style="background: #107c41;"><i class="fas fa-file-excel"></i> XLSX</button>
+                <button class="btn btn-p" onclick="exportToVCF()"><i class="fas fa-file-vcard"></i> VCF</button>
+            </div>
+        </div>
+
+        <!-- 5 Stats Boxes -->
+        <div class="stats-grid">
+            <div class="stat-card active" id="boxAll" onclick="setFilter('all')">
+                <small>Total List</small><div class="num" id="sAll">0</div>
+            </div>
+            <div class="stat-card" id="boxDupP" onclick="setFilter('dupPhone')">
+                <small>Dup Number</small><div class="num" id="sDupP">0</div>
+            </div>
+            <div class="stat-card" id="boxDupN" onclick="setFilter('dupName')">
+                <small>Dup Name</small><div class="num" id="sDupN">0</div>
+            </div>
+            <div class="stat-card" id="boxIncomplete" onclick="setFilter('incomplete')">
+                <small>Short (<10)</small><div class="num" id="sIncomplete">0</div>
+            </div>
+            <div class="stat-card" id="boxLong" onclick="setFilter('long')">
+                <small>Long (>10)</small><div class="num" id="sLong">0</div>
+            </div>
+        </div>
+
+        <div class="tools-section">
+            <div class="tool-row">
+                <div class="input-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="findInp" placeholder="Find & Live Highlight..." oninput="renderTable()">
+                </div>
+                <div class="input-box">
+                    <i class="fas fa-sync-alt"></i>
+                    <input type="text" id="replInp" placeholder="Replace with...">
+                </div>
+                <button class="btn btn-p" onclick="batchReplace()">REPLACE ALL</button>
+                <button class="btn btn-s" onclick="smartClean()"><i class="fas fa-magic"></i> AUTO CLEAN</button>
+            </div>
+            <div class="tool-row">
+                <div style="display:flex; gap:8px;">
+                    <button class="btn" style="background:#e2e8f0; color:#111" onclick="prefixTool('add+91')">+91</button>
+                    <button class="btn" style="background:#e2e8f0; color:#111" onclick="prefixTool('add91')">91</button>
+                    <button class="btn" style="background:#fee2e2; color:var(--danger)" onclick="prefixTool('remove')">REMOVE PREFIX</button>
+                </div>
+                <div class="input-box" style="flex:1">
+                    <i class="fas fa-filter"></i>
+                    <input type="text" id="tableSearch" placeholder="SEARCH IN TABLE..." oninput="renderTable()">
+                </div>
+                <button class="btn btn-d" id="bulkDel" style="display:none" onclick="deleteSelected()"><i class="fas fa-trash"></i> DELETE SELECTED</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="contactTable">
+                <thead>
+                    <tr>
+                        <th width="50"><input type="checkbox" id="masterCheck" class="drag-check" onclick="toggleAll(this)"></th>
+                        <th width="60">S.No</th>
+                        <th>Name</th>
+                        <th>Phone Number</th>
+                        <th>Status Flags</th>
+                        <th width="60">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6" style="text-align:center; padding:100px; font-weight: 800; color:var(--text-muted);">IMPORT VCF, EXCEL, OR CSV FILES TO START.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    let filesData = [];
+    let currentMode = 'all';
+    let filterType = 'all';
+    let isDragging = false;
+    let dragAction = true;
+
+    // Theme Toggle Logic
+    function toggleTheme() {
+        const body = document.body;
+        const icon = document.querySelector('#themeToggle i');
+        if (body.classList.contains('dark-mode')) {
+            body.classList.remove('dark-mode');
+            icon.className = 'fas fa-moon';
+        } else {
+            body.classList.add('dark-mode');
+            icon.className = 'fas fa-sun';
+        }
+    }
+
+    // Modal Alert Utility
+    function showModal(msg, title = "Alert", icon = "⚠️") {
+        document.getElementById('modalMsg').innerText = msg;
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalIcon').innerText = icon;
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+    // Toast Notification Utility
+    function showToast(m, type = 'success') {
+        const t = document.getElementById('toast');
+        t.innerText = m;
+        t.style.borderLeftColor = type === 'danger' ? 'var(--danger)' : 'var(--success)';
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2500);
+    }
+
+    // Sidebar Toggle
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+    // --- File Import Engine ---
+    document.getElementById('multiInput').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        for (let file of files) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            let contacts = [];
+            if (ext === 'vcf') contacts = parseVCF(await file.text());
+            else if (['xls', 'xlsx', 'csv'].includes(ext)) contacts = await parseExcel(file);
+            if (contacts.length > 0) filesData.push({ name: file.name, contacts });
+        }
+        showToast("Files Loaded Successfully!");
+        updateApp();
+    });
+
+    function parseVCF(text) {
+        return text.split("BEGIN:VCARD").filter(b => b.includes("END:VCARD")).map(b => {
+            let n = (b.match(/FN(?:;[^:]*)?:(.*)/i) || b.match(/N(?:;[^:]*)?:(.*)/i) || ["","No Name"])[1].replace(/;/g, ' ').trim();
+            let p = (b.match(/TEL(?:;[^:]*)?:(.*)/i) || ["",""])[1].replace(/[^\d+]/g, '').trim();
+            return { id: Math.random().toString(36).substr(2,9), name: n, phone: p, selected: false };
+        });
+    }
+
+    async function parseExcel(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                resolve(json.map(row => {
+                    let nk = Object.keys(row).find(k => k.toLowerCase().includes('name')) || Object.keys(row)[0];
+                    let pk = Object.keys(row).find(k => k.toLowerCase().includes('phone') || k.toLowerCase().includes('tel')) || Object.keys(row)[1];
+                    return { id: Math.random().toString(36).substr(2,9), name: String(row[nk] || 'No Name'), phone: String(row[pk] || '').replace(/[^\d+]/g, ''), selected: false };
+                }));
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // --- Core UI & Logic ---
+    function updateApp() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = `<div class="file-item ${currentMode === 'all' ? 'active' : ''}" onclick="switchView('all')"><i class="fas fa-layer-group"></i> MASTER LIST</div>`;
+        filesData.forEach((f, i) => {
+            list.innerHTML += `<div class="file-item ${currentMode === i ? 'active' : ''}" onclick="switchView(${i})"><i class="fas fa-file"></i> ${f.name.toUpperCase()}</div>`;
+        });
+        renderTable();
+    }
+
+    function switchView(m) { 
+        currentMode = m; 
+        document.getElementById('viewTitle').innerText = m === 'all' ? "DASHBOARD" : filesData[m].name.toUpperCase();
+        renderTable(); updateApp();
+    }
+
+    function cleanNum(p) {
+        let n = p.replace(/[^\d]/g, '');
+        if (n.length > 10) {
+            if (n.startsWith('91')) n = n.slice(2);
+            else if (n.startsWith('0')) n = n.slice(1);
+        }
+        return n;
+    }
+
+    function getFilteredData() {
+        let data = currentMode === 'all' ? filesData.flatMap(f => f.contacts) : filesData[currentMode].contacts;
+        const pCounts = {}; const nCounts = {};
+        data.forEach(c => {
+            let p = cleanNum(c.phone); if(p) pCounts[p] = (pCounts[p] || 0) + 1;
+            let n = c.name.toLowerCase(); if(n) nCounts[n] = (nCounts[n] || 0) + 1;
+        });
+
+        if (filterType === 'dupPhone') data = data.filter(c => pCounts[cleanNum(c.phone)] > 1).sort((a,b) => cleanNum(a.phone).localeCompare(cleanNum(b.phone)));
+        else if (filterType === 'dupName') data = data.filter(c => nCounts[c.name.toLowerCase()] > 1).sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        else if (filterType === 'incomplete') data = data.filter(c => cleanNum(c.phone).length < 10);
+        else if (filterType === 'long') data = data.filter(c => cleanNum(c.phone).length > 10);
+
+        const query = (document.getElementById('findInp').value || document.getElementById('tableSearch').value).toLowerCase();
+        if (query) data = data.filter(c => c.name.toLowerCase().includes(query) || c.phone.includes(query));
+
+        return { data, pCounts, nCounts };
+    }
+
+    function setFilter(f) {
+        filterType = f;
+        document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+        const boxMap = { all: 'boxAll', dupPhone: 'boxDupP', dupName: 'boxDupN', incomplete: 'boxIncomplete', long: 'boxLong' };
+        document.getElementById(boxMap[f]).classList.add('active');
+        renderTable();
+    }
+
+    function renderTable() {
+        const { data, pCounts, nCounts } = getFilteredData();
+        const tbody = document.getElementById('tableBody');
+        const findVal = document.getElementById('findInp').value;
+        
+        const master = currentMode === 'all' ? filesData.flatMap(f => f.contacts) : filesData[currentMode].contacts;
+        const mp = {}; const mn = {};
+        master.forEach(c => {
+            let p = cleanNum(c.phone); if(p) mp[p] = (mp[p] || 0) + 1;
+            let n = c.name.toLowerCase(); if(n) mn[n] = (mn[n] || 0) + 1;
+        });
+
+        document.getElementById('sAll').innerText = master.length;
+        document.getElementById('sDupP').innerText = master.filter(c => mp[cleanNum(c.phone)] > 1).length;
+        document.getElementById('sDupN').innerText = master.filter(c => mn[c.name.toLowerCase()] > 1).length;
+        document.getElementById('sIncomplete').innerText = master.filter(c => cleanNum(c.phone).length < 10).length;
+        document.getElementById('sLong').innerText = master.filter(c => cleanNum(c.phone).length > 10).length;
+
+        tbody.innerHTML = "";
+        data.forEach((c, i) => {
+            const tr = document.createElement('tr');
+            const pKey = cleanNum(c.phone);
+            let badges = "";
+
+            if(pCounts[pKey] > 1) {
+                const hue = (parseInt(pKey.slice(-5)) * 137.5) % 360;
+                tr.style.backgroundColor = `hsl(${hue}, 85%, 96%)`;
+                badges += '<span class="badge badge-danger">DUP NO</span>';
+            }
+            if(nCounts[c.name.toLowerCase()] > 1) badges += '<span class="badge badge-primary">DUP NAME</span>';
+            if(pKey.length < 10 && pKey !== "") badges += '<span class="badge badge-warning">SHORT</span>';
+            if(pKey.length > 10) badges += '<span class="badge badge-purple">LONG</span>';
+
+            tr.innerHTML = `
+                <td><input type="checkbox" ${c.selected ? 'checked' : ''} class="drag-check row-cb" data-id="${c.id}"></td>
+                <td><b>${i+1}</b></td>
+                <td contenteditable="true" onblur="edit('${c.id}', 'name', this.innerText)">${highlight(c.name, findVal)}</td>
+                <td contenteditable="true" onblur="edit('${c.id}', 'phone', this.innerText)">${highlight(c.phone, findVal)}</td>
+                <td>${badges}</td>
+                <td><i class="fas fa-trash-alt" style="color:var(--danger); cursor:pointer" onclick="del('${c.id}')"></i></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('bulkDel').style.display = data.some(x => x.selected) ? 'block' : 'none';
+        attachDragSelection();
+    }
+
+    // --- Actions ---
+    function attachDragSelection() {
+        const checkboxes = document.querySelectorAll('.row-cb');
+        checkboxes.forEach(cb => {
+            cb.onmousedown = (e) => { isDragging = true; dragAction = !cb.checked; cb.checked = dragAction; updateSelection(cb.dataset.id, dragAction); };
+            cb.onmouseenter = () => { if(isDragging) { cb.checked = dragAction; updateSelection(cb.dataset.id, dragAction); } };
+        });
+    }
+    window.onmouseup = () => { if(isDragging) { isDragging = false; renderTable(); } };
+
+    function updateSelection(id, state) {
+        const c = filesData.flatMap(f => f.contacts).find(x => x.id === id);
+        if(c) c.selected = state;
+        document.getElementById('bulkDel').style.display = filesData.flatMap(f => f.contacts).some(x => x.selected) ? 'block' : 'none';
+    }
+
+    function highlight(t, q) { if(!q) return t; const reg = new RegExp(`(${q})`, "gi"); return t.replace(reg, `<span class="highlight">$1</span>`); }
+    function edit(id, f, v) { const c = filesData.flatMap(x => x.contacts).find(y => y.id === id); if(c) c[f] = v.trim(); renderTable(); }
+    function del(id) { filesData.forEach(f => f.contacts = f.contacts.filter(c => c.id !== id)); showToast("Deleted", "danger"); renderTable(); }
+    function deleteSelected() { filesData.forEach(f => f.contacts = f.contacts.filter(c => !c.selected)); showToast("Removed", "danger"); renderTable(); }
+    function smartClean() {
+        const seen = new Set();
+        filesData.forEach(f => { f.contacts = f.contacts.filter(c => { let p = cleanNum(c.phone); if(!p || seen.has(p)) return false; seen.add(p); return true; }); });
+        showToast("Deduplicated!"); renderTable();
+    }
+    function batchReplace() {
+        const f = document.getElementById('findInp').value;
+        const r = document.getElementById('replInp').value;
+        if(!f) return showModal("Enter text to find!");
+        getFilteredData().data.forEach(c => { c.name = c.name.split(f).join(r); c.phone = c.phone.split(f).join(r); });
+        showToast("Replaced!"); renderTable();
+    }
+    function prefixTool(type) {
+        getFilteredData().data.forEach(c => {
+            let n = cleanNum(c.phone);
+            if(type === 'add+91' && n.length === 10) c.phone = "+91" + n;
+            else if(type === 'add91' && n.length === 10) c.phone = "91" + n;
+            else if(type === 'remove') c.phone = n;
+        });
+        showToast("Prefix Updated!"); renderTable();
+    }
+
+    // Export Functions
+    function exportToVCF() {
+        const { data } = getFilteredData();
+        if(!data.length) return showModal("Nothing to export!");
+        let vcf = data.map(c => `BEGIN:VCARD\nVERSION:3.0\nFN:${c.name}\nTEL;TYPE=CELL:${c.phone}\nEND:VCARD`).join("\n");
+        const blob = new Blob([vcf], { type: "text/vcard" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "Contacts_Fixed.vcf"; a.click();
+    }
+
+    function exportToExcel() {
+        const { data } = getFilteredData();
+        if(!data.length) return showModal("Nothing to export!");
+        const ws = XLSX.utils.json_to_sheet(data.map(c => ({ NAME: c.name, PHONE: c.phone })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Contacts");
+        XLSX.writeFile(wb, "Contacts_Export.xlsx");
+    }
+
+    function toggleAll(chk) { getFilteredData().data.forEach(c => c.selected = chk.checked); renderTable(); }
+</script>
+</body>
+</html>
